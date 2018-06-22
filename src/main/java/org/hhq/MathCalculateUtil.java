@@ -1,7 +1,6 @@
 package org.hhq;
 
 import org.apache.commons.lang3.StringUtils;
-
 import java.math.BigDecimal;
 import java.text.DecimalFormat;
 import java.util.*;
@@ -11,10 +10,6 @@ import java.util.function.Predicate;
 @SuppressWarnings("all")
 public class MathCalculateUtil {
 
-    /**
-     * 存储参数变量，用于分模块
-     */
-    private static final Map<String,String> paramsMap = new HashMap<>();
     /**
      * 存储算法优先级，用于算法排序
      */
@@ -53,7 +48,7 @@ public class MathCalculateUtil {
                 }
             }
             if((expression.contains("{")||expression.contains("["))&&isValidExpression(expression)){
-                replaceParamsValues(expression,paramMap);
+                return replaceParamsValues(expression,paramMap);
             }
         }
         return expression;
@@ -115,12 +110,20 @@ public class MathCalculateUtil {
             //算出结果
             values = perfectCalculate(valuesPrefix,values);
             //返回结果
-            expression = prefixStr.substring(0,prefixStr.lastIndexOf(valuesPrefix)+1)+params+suffixStr.substring(suffixStr.indexOf(valuesSuffix)+valuesSuffix.length()+1);
-            //记录该'{变量}'的值
-            paramsMap.put(params,values);
-
+            if(StringUtils.isEmpty(valuesPrefix)){
+                expression=prefixStr.substring(0,prefixStr.length()-1);
+            }else{
+                expression=prefixStr.substring(0,prefixStr.length()-valuesPrefix.length());
+            }
+            int suffixIndex = suffixStr.indexOf(valuesSuffix)+valuesSuffix.length()+2;
+            expression+=values;
+            if(StringUtils.isEmpty(valuesSuffix)) {
+                expression += suffixStr.substring(1,suffixStr.length());
+            }else{
+                expression += suffixStr.substring(suffixStr.length()>=suffixIndex?suffixIndex:suffixStr.length());
+            }
             if(expression.contains("(")&&isValidExpression(expression)){
-                splitModules(expression);
+                return splitModules(expression);
             }
         }
         return expression;
@@ -134,10 +137,6 @@ public class MathCalculateUtil {
     private static String[] arithmeticSplit(String expression,String regexp){
         if(isValidExpression(expression)){
             //每层最多只有一对{}
-            if(expression.contains("{")){
-                String values = expression.substring(expression.indexOf("{"),expression.indexOf("}")+1);
-                expression=expression.replaceFirst(values,paramsMap.get(values));
-            }
             String[] arithmetics = expression.split(regexp);
             return arithmetics;
         }
@@ -207,8 +206,9 @@ public class MathCalculateUtil {
                         default:
                             break;
                     }
-                    String temp = valuesArray[0]+"/"+valuesArray[1];
-                    expression.replaceFirst(temp,String.valueOf(stringValue));
+                    String temp = valuesArray[0]+symbol+valuesArray[1];
+                    int index = expression.indexOf(temp);
+                    expression = expression.substring(0,index)+stringValue+expression.substring(index+temp.length(),expression.length());
                 }else if(valuesArray!=null&&valuesArray.length>=2&&(StringUtils.isNotEmpty(valuesArray[0])||StringUtils.isNotEmpty(valuesArray[0]))){
                     throw new Exception("\n出错了：MathCalculateUtil.doCalculate("+expression+","+Arrays.toString(arithmeticSorted)+")");
                 }
@@ -225,16 +225,21 @@ public class MathCalculateUtil {
             if(StringUtils.isEmpty(left)&&StringUtils.isEmpty(right)){
                 return check;
             }
-            for(int i=left.length()-1;i>=0;i--){
-                if(left.substring(i).matches("\\D")){
-                    valuesArray[0]=left.substring(i+1);
+            //从右往左取值
+            for(int i=left.length();i>=0;i--){
+                if(i==0||String.valueOf(left.charAt(i-1)).matches("[^0-9\\.]+")){
+                    valuesArray[0]=left.substring(i,left.length());
                     check=true;
+                    break;
                 }
             }
-            for(int i=0;i<right.length();i++){
-                if(i!=0&&!right.substring(0,i).matches("\\d+")){
+            //左往右取值
+            for(int i=1;i<=right.length();i++){
+                if(i==right.length()||String.valueOf(right.charAt(i-1)).matches("[^0-9\\.]+")){
+                    if (i!=right.length())i-=1;
                     valuesArray[1]=right.substring(0,i);
                     check=true;
+                    break;
                 }
             }
         }
@@ -246,7 +251,7 @@ public class MathCalculateUtil {
      * @return            最简结果
      */
     private static String perfectCalculate(String prefix,String value){
-        double result = 0.0;
+        double result = Math.abs(Double.valueOf(value));
         if(StringUtils.isNotEmpty(prefix)&&prefix.indexOf("(")>0&&StringUtils.isNotEmpty(value)){
             //每层最多有一层()
             String temp = prefix.substring(0,prefix.length()-1);
@@ -357,8 +362,8 @@ public class MathCalculateUtil {
     }
 
     public static void main(String[] args) throws Exception {
-        String expression = "1+2";
+        String expression = "1+2+1.0+1+1+1+1000.10001+(100.0+10+19/20*6+5)";
         Map<String,Object> map = new HashMap<>();
-        MathCalculateUtil.calculate(expression,map);
+        System.out.println("value:"+ MathCalculateUtil.calculate(expression,map));
     }
 }
