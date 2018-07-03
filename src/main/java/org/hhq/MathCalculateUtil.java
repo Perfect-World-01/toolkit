@@ -1,4 +1,4 @@
-package org.hhq;
+package com.ouyeel.platform.components.credit.manager.utils;
 
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.collections4.MapUtils;
@@ -6,6 +6,7 @@ import org.apache.commons.lang3.ArrayUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
+
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
@@ -27,22 +28,22 @@ import java.util.function.Predicate;
  * {@code splitModules} 模块拆分，()分隔的为主模块， ,分隔的为子模块；每次只提取一个主模块，不管是主模块还是子模块都是计算到不含运算符号的结果值为止
  * 主模块用于分块，和进行对应于math中方法的运算{@code perfectCalculate}
  * 子模块用于分块，和进行对应于运算符号的值计算{@code arithmeticSplit},{@code arithmeticSort},{@code doCalculate}
- *
+ * <p>
  * 日志：{@code logger} 提供info级别的日志记录 {@code level} 用于splitModules中指定当前模块层级
- *
+ * <p>
  * 如果需要扩展{@see MathCalculateUtil}：
- *  1、如果你只是想增加运算规则:
- *     对应于双目运算符
- *     {@code arithmeticPriority}存储运算规则，以及运算优先级
- *     对应于:BigDecimal
- *     {@code calauteMap}存储运算规则，以及运算方法
- *     对应于Math：
- *     {@code prefix}存储运算方法，以及运算方法的使用规则
- *     {@code suffix}存储运算方法，以及运算方法的使用规则
- *  2、如果你想扩展规则(用于变量运算):
- *      对应于除双目运算符外的其他运算符
- *      建议扩展功能紧跟{@code replaceParamsValues}
- *
+ * 1、如果你只是想增加运算规则:
+ * 对应于双目运算符
+ * {@code arithmeticPriority}存储运算规则，以及运算优先级
+ * 对应于:BigDecimal
+ * {@code calauteMap}存储运算规则，以及运算方法
+ * 对应于Math：
+ * {@code prefix}存储运算方法，以及运算方法的使用规则
+ * {@code suffix}存储运算方法，以及运算方法的使用规则
+ * 2、如果你想扩展规则(用于变量运算):
+ * 对应于除双目运算符外的其他运算符
+ * 建议扩展功能紧跟{@code replaceParamsValues}
+ * <p>
  * 该类为数学计算工具类型，支持较低级的表达式计算：如下
  * String expression = "tan(1+2+1.0+1+1+1+1000.10001+(100.0+10+19/20*6+5)+min(100,100.2,99,max(1,2,3,4,5,6,100,10000,1,19999,12,18000))+{pam})";
  * Map<String, Object> map = new HashMap<>();
@@ -85,18 +86,27 @@ public class MathCalculateUtil {
     private static Logger logger = Logger.getLogger(MathCalculateUtil.class);
 
     /**
+     * @param expression 表达式
+     * @return 计算结果
+     * @throws Exception
+     */
+    public static String calculate(String expression) throws Exception {
+        return calculate(expression, null);
+    }
+
+    /**
      * 表达式计算
      *
-     * @param expression
-     * @param paramMap
-     * @return
+     * @param expression 表达式
+     * @param paramMap   变量映射
+     * @return 计算结果
      */
     public static String calculate(String expression, Map<String, Object> paramMap) throws Exception {
         level.set(0);
         expression = "(" + expression + ")";
         expression = replaceParamsValues(expression, paramMap);
-        if(logger.isInfoEnabled()){
-            logger.log(Level.INFO,"calculate:变量替换后的表达式："+expression);
+        if (logger.isInfoEnabled()) {
+            logger.log(Level.INFO, "calculate:变量替换后的表达式：" + expression);
         }
         assert StringUtils.isEmpty(expression) || expression.matches("(\\{|\\}|\\[|\\])+") : "表达式错误";
         expression = splitModules(expression);
@@ -114,10 +124,10 @@ public class MathCalculateUtil {
         if (MapUtils.isNotEmpty(paramMap) && isValidExpression(expression)) {
             for (Map.Entry<String, Object> entry : paramMap.entrySet()) {
                 if (expression.contains(entry.getKey())) {
-                    if(logger.isInfoEnabled()){
-                        logger.log(Level.INFO,"replaceParamsValues:当前变量："+entry.getKey()+";变量值："+entry.getValue());
+                    if (logger.isInfoEnabled()) {
+                        logger.log(Level.INFO, "replaceParamsValues:当前变量：" + entry.getKey() + ";变量值：" + entry.getValue());
                     }
-                    expression = expression.substring(0,expression.indexOf(entry.getKey())) + paramsValues(entry.getValue()) + expression.substring(expression.indexOf(entry.getKey())+entry.getKey().length());
+                    expression = expression.substring(0, expression.indexOf(entry.getKey())) + paramsValues(entry.getValue()) + expression.substring(expression.indexOf(entry.getKey()) + entry.getKey().length());
                 }
             }
         }
@@ -226,15 +236,15 @@ public class MathCalculateUtil {
                     builder.append(valueArray[i]);
                 }
             }
-            if(logger.isInfoEnabled()){
-                logger.info("splitModules:第"+level.incrementAndGet()+"层表达式:"+values+"，子表达式的计算结果："+builder.toString());
+            if (logger.isInfoEnabled()) {
+                logger.info("splitModules:第" + level.incrementAndGet() + "层表达式:" + values + "，子表达式的计算结果：" + builder.toString());
             }
             //算出结果
             values = perfectCalculate(valuesPrefix, builder.toString(), valuesSuffix);
             //计算后的表达式
             expression = prefixStr + values + suffixStr;
-            if(logger.isInfoEnabled()){
-                logger.info("splitModules:第"+level.get()+"层，最新原表达式:"+expression);
+            if (logger.isInfoEnabled()) {
+                logger.info("splitModules:第" + level.get() + "层，最新原表达式:" + expression);
             }
             //不放过每一层()
             if (expression.contains("(") && isValidExpression(expression)) {
@@ -278,7 +288,7 @@ public class MathCalculateUtil {
     private static void arithmeticSort(String[] arithmetics) {
         if (ArrayUtils.isNotEmpty(arithmetics) && MapUtils.isNotEmpty(arithmeticPriority)) {
             Arrays.sort(arithmetics, (str1, str2) -> {
-                if (StringUtils.isNotEmpty(str1) && StringUtils.isNotEmpty(str2)&&arithmeticPriority.get(str1)!=null&&arithmeticPriority.get(str2)!=null) {
+                if (StringUtils.isNotEmpty(str1) && StringUtils.isNotEmpty(str2) && arithmeticPriority.get(str1) != null && arithmeticPriority.get(str2) != null) {
                     if (arithmeticPriority.get(str1) >= arithmeticPriority.get(str2)) {
                         return 1;
                     } else {
@@ -394,44 +404,44 @@ public class MathCalculateUtil {
                 useValue = cm[cm.length >= 2 ? 1 : 0] == 1;
             }
             String simpleName = optional.get().getReturnType().getSimpleName().toUpperCase();
-            String result=null;
-            Object[] obj=null;
+            String result = null;
+            Object[] obj = null;
             String[] values = value.split(",");
-            for (int i = 1, n = 0,m=0; i <= values.length&&values.length>=model; i++) {
+            for (int i = 1, n = 0, m = 0; i <= values.length && values.length >= model; i++) {
                 switch (simpleName) {
                     case "DOUBLE":
-                        if(obj==null)obj = new Double[model];
-                        if(n==1) obj[0]=Double.valueOf(result);
-                        obj[m]=Double.valueOf(values[i-1]);
+                        if (obj == null) obj = new Double[model];
+                        if (n == 1) obj[0] = Double.valueOf(result);
+                        obj[m] = Double.valueOf(values[i - 1]);
                         break;
                     case "FLOAT":
-                        if(obj==null)obj = new Float[model];
-                        if(n==1) obj[0]=Float.valueOf(result);
-                        obj[m]=Float.valueOf(values[i-1]);
+                        if (obj == null) obj = new Float[model];
+                        if (n == 1) obj[0] = Float.valueOf(result);
+                        obj[m] = Float.valueOf(values[i - 1]);
                         break;
                     case "LONG":
-                        if(obj==null) obj = new Long[model];
-                        if(n==1) obj[0]=Long.valueOf(result);
-                        obj[m]=Long.valueOf(values[i-1]);
+                        if (obj == null) obj = new Long[model];
+                        if (n == 1) obj[0] = Long.valueOf(result);
+                        obj[m] = Long.valueOf(values[i - 1]);
                         break;
                     case "INT":
                     case "INEGER":
-                        if(obj==null) obj = new Integer[model];
-                        if(n==1) obj[0]=Integer.valueOf(result);
-                        obj[m]=Integer.valueOf(values[i-1]);
+                        if (obj == null) obj = new Integer[model];
+                        if (n == 1) obj[0] = Integer.valueOf(result);
+                        obj[m] = Integer.valueOf(values[i - 1]);
                         break;
                     default:
                         break;
                 }
-                m+=1;
-                if (i % model == 0 || m==model) {
-                    m=0;
-                    if (useValue) m=n= 1;
-                    result=String.valueOf(method.invoke(math, obj));
+                m += 1;
+                if (i % model == 0 || m == model) {
+                    m = 0;
+                    if (useValue) m = n = 1;
+                    result = String.valueOf(method.invoke(math, obj));
                 }
             }
-            if(logger.isInfoEnabled()){
-                logger.info("perfectCalculate:第"+level.get()+"层，操作:"+prefix+";操作的表达式:"+value+";操作结果："+result);
+            if (logger.isInfoEnabled()) {
+                logger.info("perfectCalculate:第" + level.get() + "层，操作:" + prefix + ";操作的表达式:" + value + ";操作结果：" + result);
             }
             value = result;
         }
@@ -483,7 +493,7 @@ public class MathCalculateUtil {
     public static void main(String[] args) throws Exception {
         String expression = "tan(1+2+1.0+1+1+1+1000.10001+(100.0+10+19/20*6+5)+min(100,100.2,99,max(1,2,3,4,5,6,100,10000,1,19999,12,18000))+{pam})";
         Map<String, Object> map = new HashMap<>();
-        map.put("{pam}",100);
+        map.put("{pam}", 100);
         System.out.println("value:" + MathCalculateUtil.calculate(expression, map));
     }
 }
