@@ -1,4 +1,4 @@
-package com.ouyeel.platform.components.credit.manager.utils;
+package org.hhq;
 
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.collections4.MapUtils;
@@ -6,6 +6,7 @@ import org.apache.commons.lang3.ArrayUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
+import org.apache.log4j.Priority;
 
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
@@ -157,13 +158,13 @@ public class MathCalculateUtil {
     private static final Map<String, Object> prefix = new HashMap<>();
 
     static {
-        //key对应于math中的方法，value：第一个参数为允许使用的参数个数，第二个为是否将比较的值加入下一次比较
-        prefix.put("max", new int[]{2, 1});
-        prefix.put("min", new int[]{2, 1});
-        prefix.put("abs", new int[]{1});
-        prefix.put("pow", new int[]{2});
-        prefix.put("floor", new int[]{1});
-        prefix.put("tan", new int[]{1});
+        //key对应于math中的方法，value：第一个参数为允许使用的参数个数，第二个参数表示实际允许的参数个数（-1 无限制），第三个为是否将比较的值加入下一次比较
+        prefix.put("max", new int[]{2, -1, 1});
+        prefix.put("min", new int[]{2, -1, 1});
+        prefix.put("abs", new int[]{1, 1});
+        prefix.put("pow", new int[]{2, 2});
+        prefix.put("floor", new int[]{1, 1});
+        prefix.put("tan", new int[]{1, 1});
     }
 
     private static final Set<String> suffix = new HashSet<>();
@@ -237,7 +238,7 @@ public class MathCalculateUtil {
                 }
             }
             if (logger.isInfoEnabled()) {
-                logger.info("splitModules:第" + level.incrementAndGet() + "层表达式:" + values + "，子表达式的计算结果：" + builder.toString());
+                logger.info("splitModules:第" + level.incrementAndGet() + "层，表达式:" + values + "，子表达式的计算结果：" + builder.toString());
             }
             //算出结果
             values = perfectCalculate(valuesPrefix, builder.toString(), valuesSuffix);
@@ -397,17 +398,21 @@ public class MathCalculateUtil {
             Math math = constructor.newInstance();
             Object object = MathCalculateUtil.prefix.get(prefix);
             int model = 1;
+            int length = 0;
             boolean useValue = false;
-            if (object instanceof int[]) {
-                int[] cm = (int[]) object;
-                model = cm.length >= 1 ? cm[0] : 1;
-                useValue = cm[cm.length >= 2 ? 1 : 0] == 1;
-            }
-            String simpleName = optional.get().getReturnType().getSimpleName().toUpperCase();
-            String result = null;
+            String result = "";
             Object[] obj = null;
             String[] values = value.split(",");
-            for (int i = 1, n = 0, m = 0; i <= values.length && values.length >= model; i++) {
+            if (object instanceof int[]) {
+                int[] cm = (int[]) object;
+                if (cm.length > 0) length = model = cm[0] < 0 ? 1 : cm[0];
+                if (cm.length > 1) length = cm[1] < 0 ? values.length : model;
+                if (cm.length > 2) useValue = cm[2] == 1;
+                if (model < length && logger.isEnabledFor(Priority.WARN))
+                    logger.warn("perfectCalculate:第" + level.get() + "层，当前集合函数为：" + prefix + ";允许使用的参数个数为:" + model + ";当前使用允许使用参数个数为:" + length);
+            }
+            String simpleName = optional.get().getReturnType().getSimpleName().toUpperCase();
+            for (int i = 1, n = 0, m = 0; i <= values.length && i <= length && length >= model; i++) {
                 switch (simpleName) {
                     case "DOUBLE":
                         if (obj == null) obj = new Double[model];
@@ -491,7 +496,7 @@ public class MathCalculateUtil {
     }
 
     public static void main(String[] args) throws Exception {
-        String expression = "tan(1+2+1.0+1+1+1+1000.10001+(100.0+10+19/20*6+5)+min(100,100.2,99,max(1,2,3,4,5,6,100,10000,1,19999,12,18000))+{pam})";
+        String expression = "tan(1+2+1.0+1+1+1+1000.10001+(100.0+10+19/20*6+5)+min(100,100.2,99,max(1,2,3,4,5,6,100,10000,1,19999,12,18000))+{pam},1000)";
         Map<String, Object> map = new HashMap<>();
         map.put("{pam}", 100);
         System.out.println("value:" + MathCalculateUtil.calculate(expression, map));
