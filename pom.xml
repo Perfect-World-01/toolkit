@@ -12,6 +12,7 @@
         <module>Pdf-util</module>
         <module>Web-deploy</module>
         <module>Common-util</module>
+        <module>Verify-util</module>
     </modules>
 
     <name>toolkit</name>
