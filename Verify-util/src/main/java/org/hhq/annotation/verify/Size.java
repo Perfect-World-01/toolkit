@@ -1,10 +1,10 @@
-package org.hhq.verify;
+package org.hhq.annotation.verify;
 
 import java.lang.annotation.*;
 
 import static java.lang.annotation.ElementType.FIELD;
 
-/** 自定义range注解
+/** 自定义size注解
  * Inherited            支持继承
  * Documented           允许生成文档
  * Target[FIELD]        适用范围为 字段
@@ -15,7 +15,7 @@ import static java.lang.annotation.ElementType.FIELD;
 @Documented
 @Target({FIELD})
 @Retention(RetentionPolicy.RUNTIME)
-public @interface Range {
+public @interface Size {
     /**
      * 对注解进行肯定或否定
      * @return 是否直接支持注解
@@ -23,12 +23,12 @@ public @interface Range {
     boolean value() default true;
 
     /**
-     * @return 最大值
+     * @return 最大长度
      */
     int max() default 0;
 
     /**
-     * @return 最小值
+     * @return 最小长度
      */
     int min() default 0;
 

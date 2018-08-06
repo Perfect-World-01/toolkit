@@ -10,7 +10,7 @@ public class App
 {
     public static void main( String[] args ) throws InvocationTargetException, NoSuchMethodException, NoSuchFieldException, InstantiationException, IllegalAccessException {
         Verify verify = new Verify();
-        System.out.println(VerifyUtil.verify(verify,"字段值为空"));
+        System.out.println(VerifyUtil.verify(verify,"字段值为空",true));
 
         System.out.println( "Hello World!" );
     }

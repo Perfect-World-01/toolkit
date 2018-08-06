@@ -1,13 +1,13 @@
-package org.hhq.verify;
+package org.hhq.annotation.verify;
 
 import java.lang.annotation.*;
 
 import static java.lang.annotation.ElementType.FIELD;
 
-/** 自定义非null注解
+/** 自定义非empty注解
  * Inherited            支持继承
  * Documented           允许生成文档
- * Target[FIELD]        适用范围为 字段
+ * Target[FIELD]        适用范围为字段
  * Retention[RUNTIME]   可用时期为运行时
  * @author huhaiqing
  */
@@ -15,7 +15,7 @@ import static java.lang.annotation.ElementType.FIELD;
 @Documented
 @Target({FIELD})
 @Retention(RetentionPolicy.RUNTIME)
-public @interface NotNull {
+public @interface NotEmpty {
     /**
      * 对注解进行肯定或否定
      * @return 是否直接支持注解

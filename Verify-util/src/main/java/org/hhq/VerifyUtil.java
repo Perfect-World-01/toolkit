@@ -4,9 +4,8 @@ import java.lang.annotation.Annotation;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.*;
+import java.util.function.Predicate;
 
 /**
  * @author huhaiqing
@@ -49,8 +48,9 @@ public class VerifyUtil {
 
     /**
      * 校验方法
-     * @param t                 校验对象
+     * @param verifyObject      校验对象
      * @param describeParam     如果没有校验描述的时候选用该描述
+     * @param annotationVerify  仅仅进行注解校验
      * @param <T>               泛型扩展
      * @return                  检验结果Map 或者 null
      * @throws NoSuchMethodException
@@ -59,9 +59,9 @@ public class VerifyUtil {
      * @throws NoSuchFieldException
      * @throws InstantiationException
      */
-    public static <T> Map<String,Object> verify(T t,String describeParam) throws NoSuchMethodException, IllegalAccessException, InvocationTargetException, NoSuchFieldException, InstantiationException {
-        assertNull(t);
-        Class cls = t.getClass();
+    public static <T> Map<String,Object> verify(T verifyObject, String describeParam, boolean annotationVerify) throws NoSuchMethodException, IllegalAccessException, InvocationTargetException, NoSuchFieldException, InstantiationException {
+        assertNull(verifyObject);
+        Class cls = verifyObject.getClass();
         Field[] fields = cls.getDeclaredFields();
         Method method = null;
         Object object = null;
@@ -72,7 +72,7 @@ public class VerifyUtil {
             //方便field获取值
             field.setAccessible(true);
             //即使没有注解也不会为null
-            Annotation[] annotations = field.getDeclaredAnnotations();
+            Set<Annotation> annotations = getAdditionalAnnotations(field.getDeclaredAnnotations());
             for(Annotation annotation : annotations){
                 Class<? extends Annotation> annotationType = annotation.annotationType();
                 if(verifyMap.containsKey(annotationType.getSimpleName())){
@@ -80,14 +80,14 @@ public class VerifyUtil {
                     //调用本类方法需要传入的参数
                     paramObj = new Object[paramStr.length];
                     //第一个参数值
-                    paramObj[0]=field.get(t);
+                    paramObj[0]=field.get(verifyObject);
                     for(int j=1;j<paramStr.length;j++){
                         method = annotationType.getDeclaredMethod(paramStr[j]);
                         paramObj[j] = method.invoke(annotation);
                     }
                     //允许否定注解
                     object = annotationType.getDeclaredMethod("value").invoke(annotation);
-                    if((boolean)object != (boolean)VerifyUtil.class.getMethod(paramStr[0],methodMap.get(paramStr[0])).invoke(VERIFY_UTIL,paramObj)){
+                    if((boolean)object != (boolean)getMethod(annotationType.getSimpleName(),methodMap.get(paramStr[0])).invoke(VERIFY_UTIL,paramObj)){
                         method = annotationType.getDeclaredMethod("describe");
                         Object describe = method.invoke(annotation);
                         if(describe instanceof String && !((String) describe).trim().isEmpty()){
@@ -102,13 +102,13 @@ public class VerifyUtil {
                 }
             }
             //如果没有进入注解循环
-            if(object==null){
+            if(!annotationVerify){
                 if(field.getType().getSimpleName().equalsIgnoreCase("String")){
-                    method = VerifyUtil.class.getMethod(verifyMap.get("NotEmpty")[0],Object.class);
+                    method = getMethod("NotEmpty",Object.class);
                 }else{
-                    method = VerifyUtil.class.getMethod(verifyMap.get("NotNull")[0],Object.class);
+                    method = getMethod("NotNull",Object.class);
                 }
-                if(!(boolean)method.invoke(VERIFY_UTIL,field.get(t))){
+                if(!(boolean)method.invoke(VERIFY_UTIL,field.get(verifyObject))){
                     if(isNotEmpty(describeParam)){
                         //获取传入的校验描述
                         result.put(field.getName(),describeParam);
@@ -118,9 +118,36 @@ public class VerifyUtil {
                     return result;
                 }
             }
-            object=null;
         }
         return null;
+    }
+
+    /**
+     * 获取额外的注解
+     * @param annotations 当前含有的注解
+     * @return 额外注解
+     */
+    private static Set<Annotation> getAdditionalAnnotations(Annotation[] annotations){
+        Set<Annotation> annotationSets = new HashSet<>();
+        Arrays.stream(annotations).forEach(annotation -> {
+            Class<? extends Annotation> annotationType = annotation.annotationType();
+            Predicate<Method> filter = method -> method!=null && method.getReturnType().isAnnotation();
+            Arrays.stream(annotationType.getDeclaredMethods()).filter(filter).forEach(method -> {
+                try {
+                    annotationSets.add((Annotation) method.invoke(annotation));
+                } catch (IllegalAccessException e) {
+                    e.printStackTrace();
+                } catch (InvocationTargetException e) {
+                    e.printStackTrace();
+                }
+            });
+        });
+        return annotationSets;
+    }
+
+    private static Method getMethod(String methodName, Class<?>... classes) throws NoSuchMethodException {
+        assertEmpty(verifyMap.get(methodName)==null || verifyMap.get(methodName).length<=0,"传入方法名称为空");
+        return VerifyUtil.class.getMethod(verifyMap.get(methodName)[0],classes);
     }
     /**
      * empty 类型
@@ -152,7 +179,7 @@ public class VerifyUtil {
         return true;
     }
 
-    /**
+    /**适用于数值
      * rang 类型
      * @param object    判断对象
      * @param max       最大值
@@ -222,6 +249,28 @@ public class VerifyUtil {
     public static boolean assertEmpty(Object object){
         if(!isNotEmpty(object)){
             throw new NullPointerException();
+        }
+        return false;
+    }
+
+    /**
+     * empty断言
+     * @param bool 判断对象
+     * @return 判断结果或NullPointerException
+     */
+    public static boolean assertEmpty(boolean bool,String... messages){
+        if(bool){
+            StringBuilder builder = null;
+            if(messages!=null && messages.length>0){
+                builder = new StringBuilder();
+                for(String message:messages){
+                    builder.append(message);
+                    builder.append("\n");
+                }
+            }else{
+                builder = new StringBuilder("校验值为空");
+            }
+            throw new AssertionError(builder.toString());
         }
         return false;
     }

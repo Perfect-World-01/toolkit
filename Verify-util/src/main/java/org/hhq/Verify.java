@@ -1,11 +1,15 @@
 package org.hhq;
 
-import org.hhq.verify.NotEmpty;
-import org.hhq.verify.Range;
+import org.hhq.annotation.StringVerify;
+import org.hhq.annotation.verify.NotEmpty;
+import org.hhq.annotation.verify.NotNull;
+import org.hhq.annotation.verify.Range;
+import org.hhq.annotation.verify.Size;
 
 public class Verify {
-
-    private String describe;
+    @StringVerify(size = @Size(describe = "Sizevf qefi qen rm", min = 1, max = 2), notEmpty = @NotEmpty(describe = "NotEmptyqefbqernoqemr"),
+            notNull = @NotNull(describe = "NotNullerbqerbnqoermb"))
+    private String describe="ininomo";
 
     @NotEmpty(describe = "名称不能为空")
     private String name;
