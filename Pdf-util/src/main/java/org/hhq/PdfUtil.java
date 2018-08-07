@@ -142,7 +142,10 @@ public class PdfUtil {
             PdfWriter pdfWriter = PdfWriter.getInstance(document,outputStream);
             document.open();
             XMLWorkerHelper.getInstance().parseXHtml(pdfWriter,document,inputStream);
+            outputStream.flush();
             document.close();
+            outputStream.close();
+            inputStream.close();
             return true;
         }
         return false;

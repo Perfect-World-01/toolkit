@@ -71,8 +71,10 @@ public class VerifyUtil {
         for (Field field:fields){
             //方便field获取值
             field.setAccessible(true);
-            //即使没有注解也不会为null
+            //获取额外注解
             Set<Annotation> annotations = getAdditionalAnnotations(field.getDeclaredAnnotations());
+            //当前注解
+            annotations.addAll(Arrays.asList(field.getDeclaredAnnotations()));
             for(Annotation annotation : annotations){
                 Class<? extends Annotation> annotationType = annotation.annotationType();
                 if(verifyMap.containsKey(annotationType.getSimpleName())){
@@ -132,6 +134,7 @@ public class VerifyUtil {
         Arrays.stream(annotations).forEach(annotation -> {
             Class<? extends Annotation> annotationType = annotation.annotationType();
             Predicate<Method> filter = method -> method!=null && method.getReturnType().isAnnotation();
+            //注解中的注解，只提供二层
             Arrays.stream(annotationType.getDeclaredMethods()).filter(filter).forEach(method -> {
                 try {
                     annotationSets.add((Annotation) method.invoke(annotation));
